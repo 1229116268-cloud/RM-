@@ -81,7 +81,7 @@ bag 放在仓库外（约 407 MB），包含两个话题：
 
 ## 说明
 
-- `mapping_node` 仍为骨架；三维地图由 FAST-LIO 直接产出并保存。
+- `mapping_node` 已实现：订阅 FAST-LIO 的 `/cloud_registered`，体素去重累积成图，1 秒定时发布 `/mapping/map`，并转发 `/Odometry`、`/path`；调用 `/mapping/save_map` 保存 pcd。
 - 二维图采用保守策略：只有观测到落点的格子标占用，其余标未知（205），未做射线清除。
 - 曾尝试射线清除（射线遇障碍即停）：由于点云在传感器附近非常密集（2 m 内 1610 个点），单原点射线走一两格就被截断，输出几乎全是未知，因此未采用。
 - 该数据的地面不在 z≈0 附近（z 中位数约 17.7 m），没有稳定的水平地面，因此未做地面分割。
@@ -90,3 +90,15 @@ bag 放在仓库外（约 407 MB），包含两个话题：
 
 - FAST-LIO: https://github.com/hku-mars/FAST_LIO
 - livox_ros_driver2: https://github.com/Livox-SDK/livox_ros_driver2
+
+## 三维建图节点（mapping_node）
+
+订阅 FAST-LIO 的 `/cloud_registered`（世界系单帧点云），按 `voxel_size`（默认 0.1 m）体素去重后累积，每 1 秒发布一次整图到 `/mapping/map`，同时转发 `/Odometry`、`/path` 到 `/mapping/odom`、`/mapping/path`。
+
+    ros2 run mid360_mapping mapping_node --ros-args \
+      --params-file src/mid360_mapping/config/mid360_recorded.yaml \
+      -p map_output_path:=$HOME/RM-/maps/map_3d_node.pcd
+
+保存：
+
+    ros2 service call /mapping/save_map std_srvs/srv/Trigger
