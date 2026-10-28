@@ -30,11 +30,17 @@ resolution = 0.1
 grid_xy = np.floor(xyz_filtered[:, :2] / resolution).astype(int)
 unique_grids = np.unique(grid_xy, axis=0)
 
+# 1. 先求点云的边界（注意：因为 unique_grids 是格子编号，这里求出来的也是格子编号）
 min_x, min_y = np.min(unique_grids, axis=0)
 max_x, max_y = np.max(unique_grids, axis=0)
 
+# 2. 再算图片的宽和高（格子数）
 width = max_x - min_x + 1
 height = max_y - min_y + 1
+
+# 3. 最后算原点在图片里的坐标（DSH 的完美公式，不再除以 resolution）
+origin_x = -min_x
+origin_y = height - 1 + min_y
 
 # ⭐ 使用 205 作为空闲底色
 map_img = np.full((height, width), 205, dtype=np.uint8)
@@ -52,12 +58,6 @@ else:
 # ⭐ 补上这两行：计算雷达原点在图片中的像素坐标
 origin_x = int((0 - min_x) / resolution)
 origin_y = int(height - 1 - (0 - min_y) / resolution)
-
-# 然后再去画线
-for x, y in ray_casting_points:
-    img_y = int(height - 1 - (y - min_y))
-    img_x = int(x - min_x)
-    cv2.line(map_img, (origin_x, origin_y), (img_x, img_y), 254, 1)
 
 # 然后用 ray_casting_points 去画线
 for x, y in ray_casting_points:
